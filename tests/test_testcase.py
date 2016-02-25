@@ -125,6 +125,62 @@ def test_vcr_kwargs_cassette_dir():
     assert test._get_cassette_library_dir.call_count == 0
 
 
+def test_register_true_matcher(tmpdir):
+
+    cassette_dir = tmpdir.mkdir('cassettes')
+    assert len(cassette_dir.listdir()) == 0
+
+    def true_matcher(r1, r2):
+        return True
+
+    class MyTest(VCRTestCase):
+        def test_foo(self):
+            self.response = urlopen('http://example.com').read()
+
+        def _get_cassette_library_dir(self):
+            return str(cassette_dir)
+
+        def _register_matcher(self):
+            return true_matcher
+
+    # First test actually reads from the web
+    test = run_testcase(MyTest)[0][0]
+    assert len(test.cassette.requests) == 1
+    assert test.cassette.play_count == 0
+    # Second test reads from cassette
+    test2 = run_testcase(MyTest)[0][0]
+    assert len(test2.cassette.requests) == 1
+    assert test2.cassette.play_count == 1
+
+
+def test_register_false_matcher(tmpdir):
+
+    cassette_dir = tmpdir.mkdir('cassettes')
+    assert len(cassette_dir.listdir()) == 0
+
+    def false_matcher(r1, r2):
+        return False
+
+    class MyTest(VCRTestCase):
+        def test_foo(self):
+            self.response = urlopen('http://example.com').read()
+
+        def _get_cassette_library_dir(self):
+            return str(cassette_dir)
+
+        def _register_matcher(self):
+            return false_matcher
+
+    # First test actually reads from the web
+    test = run_testcase(MyTest)[0][0]
+    assert len(test.cassette.requests) == 1
+    assert test.cassette.play_count == 0
+    # Second test doesn't read from cassette
+    test2 = run_testcase(MyTest)[0][0]
+    assert len(test2.cassette.requests) == 1
+    assert test2.cassette.play_count == 0
+
+
 def test_testcase_playback(tmpdir):
     cassette_dir = tmpdir.mkdir('cassettes')
     assert len(cassette_dir.listdir()) == 0

@@ -20,6 +20,10 @@ class VCRTestCase(unittest.TestCase):
             if 'cassette_library_dir' not in kwargs:
                 kwargs['cassette_library_dir'] = self._get_cassette_library_dir()
             myvcr = vcr.VCR(**kwargs)
+            matcher = self._register_matcher()
+            if matcher:
+                myvcr.register_matcher(matcher.__name__, matcher)
+                myvcr.match_on = [matcher.__name__]
             cm = myvcr.use_cassette(self._get_cassette_name())
             self.cassette = cm.__enter__()
             self.addCleanup(cm.__exit__, None, None, None)
@@ -34,3 +38,6 @@ class VCRTestCase(unittest.TestCase):
     def _get_cassette_name(self):
         return '{0}.{1}.yaml'.format(self.__class__.__name__,
                                      self._testMethodName)
+
+    def _register_matcher(self):
+        return None
